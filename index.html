@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="theme-color" content="#6d28d9">
+  <meta name="description" content="Jurnal Mengajar Digital">
+  <title>Jurnal Mengajar Digital</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      background: #f8fafc;
+    }
+
+    body {
+      overflow: hidden;
+    }
+
+    #appFrame {
+      display: block;
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      border: 0;
+      background: #fff;
+    }
+
+    #loading {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f8fafc;
+      transition: opacity .3s ease, visibility .3s ease;
+      font-family: Arial, sans-serif;
+    }
+
+    #loading.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .loading-box {
+      text-align: center;
+      color: #475569;
+    }
+
+    .logo {
+      width: 54px;
+      height: 54px;
+      margin: 0 auto 16px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, #7c3aed, #4c1d95);
+      color: white;
+      font-size: 25px;
+      box-shadow: 0 10px 30px rgba(109, 40, 217, .25);
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      margin: 14px auto 0;
+      border: 3px solid #ddd6fe;
+      border-top-color: #7c3aed;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    #error {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: #f8fafc;
+      font-family: Arial, sans-serif;
+    }
+
+    .error-box {
+      width: min(460px, 100%);
+      padding: 28px;
+      text-align: center;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      box-shadow: 0 15px 40px rgba(15, 23, 42, .08);
+    }
+
+    .error-box h2 {
+      margin: 0 0 8px;
+      color: #0f172a;
+    }
+
+    .error-box p {
+      margin: 0 0 20px;
+      line-height: 1.6;
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    .retry {
+      border: 0;
+      border-radius: 10px;
+      padding: 11px 18px;
+      background: #7c3aed;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Loading -->
+  <div id="loading">
+    <div class="loading-box">
+      <div class="logo">📚</div>
+
+      <strong>Jurnal Mengajar Digital</strong>
+
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+
+  <!-- Aplikasi GAS -->
+  <iframe
+    id="appFrame"
+    src="https://script.google.com/macros/s/AKfycbzvdwBupYqULl1UET_t5zJhV2dM8dSk3tGiBqesk7bANezHViEItoFLx6Od-ybNFfx1mQ/exec"
+    title="Jurnal Mengajar Digital"
+    allow="clipboard-write"
+    referrerpolicy="strict-origin-when-cross-origin">
+  </iframe>
+
+
+  <!-- Error -->
+  <div id="error">
+
+    <div class="error-box">
+
+      <h2>Aplikasi belum dapat dimuat</h2>
+
+      <p>
+        Halaman Google Apps Script tidak dapat ditampilkan
+        di dalam wrapper. Silakan coba lagi atau buka
+        aplikasi langsung.
+      </p>
+
+      <button
+        class="retry"
+        onclick="location.reload()">
+        Coba Lagi
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <script>
+
+    const frame =
+      document.getElementById('appFrame');
+
+    const loading =
+      document.getElementById('loading');
+
+    const error =
+      document.getElementById('error');
+
+
+    /*
+     * Saat Web App GAS berhasil dimuat,
+     * hilangkan loading screen.
+     */
+    frame.addEventListener('load', function () {
+
+      loading.classList.add('hidden');
+
+    });
+
+
+    /*
+     * Timeout pengaman.
+     */
+    setTimeout(function () {
+
+      if (!loading.classList.contains('hidden')) {
+
+        loading.classList.add('hidden');
+
+        error.style.display = 'flex';
+
+      }
+
+    }, 12000);
+
+  </script>
+
+</body>
+</html>
