@@ -1,4 +1,4 @@
-const CACHE_NAME = "jurnal-mengajar-pwa-v2";
+const CACHE_NAME = "jurnal-mengajar-pwa-v3";
 const APP_SHELL = [
   "./",
   "./index.html",
