@@ -1,9 +1,9 @@
 const CACHE_NAME = "jurnal-mengajar-pwa-v3";
+
 const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
-  "./sw.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png"
 ];
@@ -19,29 +19,65 @@ self.addEventListener("install", event => {
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(
-        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-      ))
+      .then(keys => {
+        return Promise.all(
+          keys
+            .filter(key => key !== CACHE_NAME)
+            .map(key => caches.delete(key))
+        );
+      })
       .then(() => self.clients.claim())
   );
 });
 
 self.addEventListener("fetch", event => {
-  const req = event.request;
-  const url = new URL(req.url);
+  const request = event.request;
 
-  // Never intercept the GAS application itself.
-  if (url.hostname === "script.google.com" || url.hostname === "scriptusercontent.com") return;
+  if (request.method !== "GET") return;
 
-  if (req.method !== "GET") return;
+  const url = new URL(request.url);
+
+  // Jangan cache Google Apps Script.
+  if (
+    url.hostname === "script.google.com" ||
+    url.hostname === "scriptusercontent.com"
+  ) {
+    return;
+  }
+
+  // Hanya tangani resource milik GitHub Pages.
+  if (url.origin !== self.location.origin) return;
 
   event.respondWith(
-    caches.match(req).then(cached => cached || fetch(req).then(res => {
-      if (res.ok && url.origin === self.location.origin) {
-        const copy = res.clone();
-        caches.open(CACHE_NAME).then(c => c.put(req, copy));
-      }
-      return res;
-    }).catch(() => caches.match("./index.html")))
+    caches.match(request)
+      .then(cached => {
+        if (cached) {
+          return cached;
+        }
+
+        return fetch(request)
+          .then(response => {
+            if (!response || !response.ok) {
+              return response;
+            }
+
+            const copy = response.clone();
+
+            caches.open(CACHE_NAME)
+              .then(cache => cache.put(request, copy));
+
+            return response;
+          })
+          .catch(() => {
+            if (request.mode === "navigate") {
+              return caches.match("./index.html");
+            }
+
+            return new Response("", {
+              status: 503,
+              statusText: "Offline"
+            });
+          });
+      })
   );
 });
