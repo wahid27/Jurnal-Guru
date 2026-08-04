@@ -1,157 +1,26 @@
-<!doctype html>
-<html lang="id">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#0f766e">
-  <meta name="description" content="Jurnal Mengajar Digital — aplikasi jurnal pembelajaran berbasis Google Apps Script.">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Jurnal Mengajar">
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="icon" href="./icons/icon-192.png">
-  <title>Jurnal Mengajar Digital</title>
-  <style>
-    :root{--brand:#0f766e;--brand2:#115e59;--bg:#f1f5f9;--card:#fff;--text:#0f172a;--muted:#64748b}
-    *{box-sizing:border-box}
-    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text)}
-    #app{height:100dvh;display:flex;flex-direction:column}
-    .topbar{height:56px;flex:0 0 56px;display:flex;align-items:center;gap:10px;padding:0 14px;padding-top:env(safe-area-inset-top);background:var(--brand);color:#fff;box-shadow:0 2px 10px #0002;z-index:10}
-    .brand{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
-    button{border:0;border-radius:10px;padding:9px 12px;font:inherit;font-weight:700;cursor:pointer}
-    .btn{background:#ffffff1c;color:#fff}
-    .btn:active{transform:scale(.98)}
-    #frameWrap{position:relative;flex:1;min-height:0;background:#fff}
-    #gasFrame{display:block;border:0;width:100%;height:100%;background:#fff}
-    #loader{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:5;transition:opacity .25s}
-    .loaderCard{background:var(--card);padding:24px;border-radius:18px;box-shadow:0 10px 30px #0f172a18;text-align:center;min-width:240px}
-    .spinner{width:34px;height:34px;margin:0 auto 12px;border:4px solid #cbd5e1;border-top-color:var(--brand);border-radius:50%;animation:spin .8s linear infinite}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    #error{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:22px;background:var(--bg);z-index:6}
-    .errorCard{max-width:480px;background:#fff;border-radius:18px;padding:24px;box-shadow:0 10px 30px #0f172a18}
-    .errorCard h2{margin:0 0 8px}.errorCard p{color:var(--muted);line-height:1.5}
-    .primary{background:var(--brand);color:#fff}
-    #offline{display:none;position:fixed;bottom:calc(12px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:9px 14px;border-radius:999px;font-size:13px;z-index:20;box-shadow:0 5px 20px #0003}
-    @media (display-mode: standalone){.topbar{height:56px;flex-basis:56px}}
-  </style>
-</head>
-<body>
-<div id="app">
-  <header class="topbar">
-    <div class="brand" id="brand">Jurnal Mengajar Digital</div>
-    <button class="btn" id="reloadBtn" type="button" aria-label="Muat ulang">↻</button>
-    <button class="btn" id="installBtn" type="button" style="display:none">Pasang</button>
-  </header>
-
-  <main id="frameWrap">
-    <div id="loader">
-      <div class="loaderCard">
-        <div class="spinner"></div>
-        <strong>Memuat Jurnal Mengajar…</strong>
-        <div style="margin-top:6px;color:#64748b;font-size:13px">Menghubungkan ke aplikasi sekolah</div>
-      </div>
-    </div>
-
-    <div id="error">
-      <div class="errorCard">
-        <h2>Aplikasi belum dapat dimuat</h2>
-        <p id="errorText">Periksa URL Web App GAS dan koneksi internet, lalu coba lagi.</p>
-        <button class="primary" id="retryBtn" type="button">Coba Lagi</button>
-      </div>
-    </div>
-
-    <iframe id="gasFrame"
-      title="Jurnal Mengajar Digital"
-      allow="clipboard-read; clipboard-write"
-      referrerpolicy="strict-origin-when-cross-origin"></iframe>
-  </main>
-</div>
-<div id="offline">Koneksi internet terputus</div>
-
-<script>
-/* =========================================================
-   KONFIGURASI PEMILIK
-   CUKUP GANTI GAS_URL DI BAGIAN INI.
-   Gunakan URL deployment GAS yang berakhiran /exec.
-   ========================================================= */
-const CONFIG = Object.freeze({
-  GAS_URL: "PASTE_URL_WEB_APP_GAS_DI_SINI",
-  APP_NAME: "Jurnal Mengajar Digital",
-  SCHOOL_NAME: "MTs Al Istiqomah"
-});
-
-const $ = id => document.getElementById(id);
-$("brand").textContent = CONFIG.SCHOOL_NAME || CONFIG.APP_NAME;
-
-let deferredInstallPrompt = null;
-let loadTimer = null;
-
-function validGasUrl(url){
-  try {
-    const u = new URL(url);
-    return u.protocol === "https:" &&
-      u.hostname === "script.google.com" &&
-      /\/macros\/s\/[^/]+\/exec\/?$/.test(u.pathname);
-  } catch(e){ return false; }
-}
-
-function showError(message){
-  clearTimeout(loadTimer);
-  $("loader").style.display = "none";
-  $("error").style.display = "flex";
-  $("errorText").textContent = message;
-}
-
-function loadApp(){
-  $("error").style.display = "none";
-  $("loader").style.display = "flex";
-
-  if(!validGasUrl(CONFIG.GAS_URL)){
-    showError("URL Web App GAS belum benar. Buka index.html lalu isi CONFIG.GAS_URL dengan URL deployment GAS yang berakhiran /exec.");
-    return;
-  }
-
-  $("gasFrame").src = CONFIG.GAS_URL;
-  clearTimeout(loadTimer);
-  loadTimer = setTimeout(() => {
-    // GAS may continue loading on slow connections; only expose recovery after a generous timeout.
-    if($("loader").style.display !== "none"){
-      showError("Aplikasi belum merespons. Pastikan deployment GAS aktif, aksesnya sesuai kebutuhan, dan internet stabil.");
+{
+  "name": "Jurnal Mengajar Digital",
+  "short_name": "Jurnal Guru",
+  "description": "Aplikasi Jurnal Mengajar Digital untuk administrasi pembelajaran.",
+  "lang": "id-ID",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f1f5f9",
+  "theme_color": "#0f766e",
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
-  }, 30000);
+  ]
 }
-
-$("gasFrame").addEventListener("load", () => {
-  clearTimeout(loadTimer);
-  $("loader").style.opacity = "0";
-  setTimeout(() => $("loader").style.display = "none", 250);
-});
-$("reloadBtn").addEventListener("click", loadApp);
-$("retryBtn").addEventListener("click", loadApp);
-
-window.addEventListener("online", () => $("offline").style.display = "none");
-window.addEventListener("offline", () => $("offline").style.display = "block");
-if(!navigator.onLine) $("offline").style.display = "block";
-
-window.addEventListener("beforeinstallprompt", e => {
-  e.preventDefault();
-  deferredInstallPrompt = e;
-  $("installBtn").style.display = "inline-block";
-});
-$("installBtn").addEventListener("click", async () => {
-  if(!deferredInstallPrompt) return;
-  deferredInstallPrompt.prompt();
-  await deferredInstallPrompt.userChoice;
-  deferredInstallPrompt = null;
-  $("installBtn").style.display = "none";
-});
-
-if("serviceWorker" in navigator){
-  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(console.warn));
-}
-
-loadApp();
-</script>
-</body>
-</html>
